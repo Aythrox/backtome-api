@@ -1,0 +1,44 @@
+service: vuelve-a-mi-api
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.12
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    USERS_TABLE: ${self:service}-users-${self:provider.stage}
+    SUBJECTS_TABLE: ${self:service}-subjects-${self:provider.stage}
+    ALERTS_TABLE: ${self:service}-alerts-${self:provider.stage}
+    SIGHTINGS_TABLE: ${self:service}-sightings-${self:provider.stage}
+    MESSAGES_TABLE: ${self:service}-messages-${self:provider.stage}
+    JWT_SECRET: ${env:JWT_SECRET, 'local-dev-secret-do-not-use-in-prod'}
+  iam: ${file(resources/iam.yml)}
+
+functions:
+  authLogin:
+    handler: src/core/security.login_handler
+    events:
+      - httpApi:
+          path: /auth/login
+          method: post
+
+  reportSighting:
+    handler: src/features/sightings/handler.report_sighting
+    events:
+      - httpApi:
+          path: /sightings
+          method: post
+          # In a real setup, we'd attach a custom Lambda Authorizer here
+          # authorizer:
+          #   name: customAuthorizer
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: false
+
+resources:
+  Resources: ${file(resources/dynamodb.yml)}
