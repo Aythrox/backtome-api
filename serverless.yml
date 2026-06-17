@@ -13,6 +13,10 @@ provider:
     SIGHTINGS_TABLE: ${self:service}-sightings-${self:provider.stage}
     MESSAGES_TABLE: ${self:service}-messages-${self:provider.stage}
     JWT_SECRET: ${env:JWT_SECRET, 'local-dev-secret-do-not-use-in-prod'}
+  deploymentBucket:
+    name: betheltech-sls-deployment-bucket${self:custom.suffix}
+  httpApi:
+    cors: true
   iam: ${file(resources/iam.yml)}
 
 functions:
@@ -29,16 +33,84 @@ functions:
       - httpApi:
           path: /sightings
           method: post
-          # In a real setup, we'd attach a custom Lambda Authorizer here
-          # authorizer:
-          #   name: customAuthorizer
+          
+  # Users
+  createUser:
+    handler: src/features/users/handler.create_user
+    events:
+      - httpApi:
+          path: /users
+          method: post
+  getUser:
+    handler: src/features/users/handler.get_user
+    events:
+      - httpApi:
+          path: /users/{id}
+          method: get
+
+  # Subjects
+  createSubject:
+    handler: src/features/subjects/handler.create_subject
+    events:
+      - httpApi:
+          path: /subjects
+          method: post
+  getSubject:
+    handler: src/features/subjects/handler.get_subject
+    events:
+      - httpApi:
+          path: /subjects/{id}
+          method: get
+  listSubjectsByOwner:
+    handler: src/features/subjects/handler.list_by_owner
+    events:
+      - httpApi:
+          path: /subjects
+          method: get
+
+  # Alerts
+  createAlert:
+    handler: src/features/alerts/handler.create_alert
+    events:
+      - httpApi:
+          path: /alerts
+          method: post
+  getNearbyAlerts:
+    handler: src/features/alerts/handler.get_nearby
+    events:
+      - httpApi:
+          path: /alerts/nearby
+          method: get
+
+  # Messages
+  createMessage:
+    handler: src/features/messages/handler.create_message
+    events:
+      - httpApi:
+          path: /messages
+          method: post
+  listMessagesByAlert:
+    handler: src/features/messages/handler.list_by_alert
+    events:
+      - httpApi:
+          path: /messages
+          method: get
 
 plugins:
   - serverless-python-requirements
 
 custom:
   pythonRequirements:
-    dockerizePip: false
+    dockerizePip: true
+    layer: false
+    slim: false
+    dockerRunArgs:
+      - --platform
+      - linux/amd64
+  bucketSuffix:
+    prod: ''
+    other: '-${sls:stage}'
+  suffix: ${self:custom.bucketSuffix.${sls:stage}, self:custom.bucketSuffix.other}
 
 resources:
   Resources: ${file(resources/dynamodb.yml)}

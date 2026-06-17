@@ -3,7 +3,7 @@ from typing import Optional
 from datetime import datetime
 from enum import Enum
 import uuid
-import geohash as gh
+import geohash2 as gh
 
 class AlertStatus(str, Enum):
     ACTIVE = "ACTIVE"
